@@ -26,7 +26,7 @@ $email_id = mysqli_real_escape_string($conn, $input['email_id']);
 $feelings = mysqli_real_escape_string($conn, $input['feelings']);
 $mood = mysqli_real_escape_string($conn, $input['mood']);
 $date = date('Y-m-d'); 
-$time = date('H:i:s');
+$time = date('h:i:s');
 
 $insert_your_mood = "INSERT INTO `your_mood`(`email_id`, `fellings`, `mood`, `date`, `time`) VALUES ('$email_id','$feelings','$mood','$date','$time')";
 
