@@ -12,10 +12,10 @@ if (!$input) {
 }
 
 
-$user_name = $input['user_name'] ?? '';
-$user_email_id = $input['user_email_id'] ?? '';
-$user_height = $input['user_height'] ?? '';
-$user_weight = $input['user_weight'] ?? '';
+$user_name = $input['name'] ?? '';
+$user_email_id = $input['email'] ?? '';
+$user_height = $input['height'] ?? '';
+$user_weight = $input['weight'] ?? '';
 
 if (empty($user_name) || empty($user_email_id) || empty($user_height) || empty($user_weight)) {
     echo json_encode(["status" => "error", "message" => "Please fill all information"]);
