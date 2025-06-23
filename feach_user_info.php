@@ -6,7 +6,7 @@ $data=array();
 
 $sql_feach_user_info="SELECT * FROM `user_details` WHERE user_email_id='$email_id'";
 $result_feach_user_info=mysqli_query($conn, $sql_feach_user_info);
-if (mysqli_num_rows($result_feach_user_info>0)) {
+if (mysqli_num_rows($result_feach_user_info)>0) {
     foreach ($result_feach_user_info as $row) {
         $data[] = array(
             "user_name" => $row['user_name'],
