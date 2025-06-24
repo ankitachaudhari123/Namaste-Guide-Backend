@@ -16,6 +16,7 @@ $user_name = $input['name'] ?? '';
 $user_email_id = $input['email'] ?? '';
 $user_height = $input['height'] ?? '';
 $user_weight = $input['weight'] ?? '';
+$user_password = $input['password'] ?? '';
 
 if (empty($user_name) || empty($user_email_id) || empty($user_height) || empty($user_weight)) {
     echo json_encode(["status" => "error", "message" => "Please fill all information"]);
