@@ -16,9 +16,9 @@ $user_name = $input['name'] ?? '';
 $user_email_id = $input['email'] ?? '';
 $user_height = $input['height'] ?? '';
 $user_weight = $input['weight'] ?? '';
-$user_password = $input['password'] ?? '';
+$user_password = password_hash($input['password'] ?? '', PASSWORD_DEFAULT);
 
-if (empty($user_name) || empty($user_email_id) || empty($user_height) || empty($user_weight)) {
+if (empty($user_name) || empty($user_email_id) || empty($user_height) || empty($user_weight || empty($user_password))) {
     echo json_encode(["status" => "error", "message" => "Please fill all information"]);
     exit();
 }
@@ -34,9 +34,9 @@ if ($result_check_user->num_rows > 0) {
     exit();
 }
 
-$insert_user_data = "INSERT INTO `user_details` (`user_name`, `user_email_id`, `height`, `weight`) VALUES (?, ?, ?, ?)";
+$insert_user_data = "INSERT INTO `user_details` (`user_name`, `user_email_id`, `password`, `height`, `weight`) VALUES (?, ?, ?, ?, ?)";
 $stmt = $conn->prepare($insert_user_data);
-$stmt->bind_param("ssdd", $user_name, $user_email_id, $user_height, $user_weight);
+$stmt->bind_param("sssdd", $user_name, $user_email_id, $user_password, $user_height, $user_weight);
 
 if ($stmt->execute()) {
     $bmi = $user_weight / ($user_height * $user_height);
