@@ -1,48 +1,105 @@
 <?php
-header('Content-Type: application/json');
-include('./db/db.php');
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-$inputJSON = file_get_contents("php://input");
-$input = json_decode($inputJSON, true);
+require 'vendor/autoload.php';
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
-if (!$input) {
-    echo json_encode(["status" => "error", "message" => "Invalid JSON input"]);
-    exit();
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__); // Load .env
+$dotenv->load();
+
+require './db/db.php'; // DB connection
+
+$key = $_ENV['JWT_SECRET']; // Secure secret key from .env
+
+// Get POST data
+$user_email_id = $_POST['email'] ?? null;
+$password = $_POST['password'] ?? null;
+
+if (is_null($user_email_id) || is_null($password)) {
+    http_response_code(400);
+    echo json_encode("Email or password not provided");
+    exit;
 }
 
-$user_email = $input['email'] ?? '';
-$user_password = $input['password'] ?? '';
-
-if (empty($user_email) || empty($user_password)) {
-    echo json_encode(["status" => "error", "message" => "Please fill all fields"]);
-    exit();
+// Check database connection
+if (!$connection) {
+    http_response_code(500);
+    echo json_encode("Database connection failed: " . mysqli_connect_error());
+    exit;
 }
 
-$sql = "SELECT * FROM `user_details` WHERE `user_email_id` = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $user_email);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    $sql = "SELECT * FROM user_details WHERE user_email_id = ?";
+    $stmt = $connection->prepare($sql);
 
-if ($result->num_rows === 1) {
-    $user = $result->fetch_assoc();
-     if (password_verify($user_password, $user['password'])) {
-        echo json_encode([
-            "status" => "success",
-            "message" => "Login successful",
-            "user" => [
-                "name" => $user['user_name'],
-                "email" => $user['user_email_id'],
-                "height" => $user['height'],
-                "weight" => $user['weight'],
-                "bmi" => $user['bmi'] ?? null,
-                "bmi_status" => $user['bmi_status'] ?? null
-            ]
-        ]);
-    } else {
-        echo json_encode(["status" => "error", "message" => "password"]);
+    if (!$stmt) {
+        throw new Exception("Database query preparation failed: " . $connection->error);
     }
-} else {
-    echo json_encode(["status" => "error", "message" => "Wrong email please sign up."]);
+
+    $stmt->bind_param("ss", $user_email_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+
+        if (password_verify($password, $user['password'])) {
+            $userId = $user['user_id'];
+            $username = $user['username'];
+
+            // ✅ Access Token: 30 days | Refresh Token: 10 mins
+            $accessTokenExpiration = time() + (30 * 24 * 60 * 60); // 30 days
+            $refreshTokenExpiration = time() + (10 * 60); // 10 minutes
+
+            $accessPayload = [
+                "user_id" => $userId,
+                "exp" => $accessTokenExpiration
+            ];
+
+            $refreshPayload = [
+                "user_id" => $userId,
+                "exp" => $refreshTokenExpiration
+            ];
+
+            $accessToken = JWT::encode($accessPayload, $key, 'HS256');
+            $refreshToken = JWT::encode($refreshPayload, $key, 'HS256');
+
+            // Store both tokens in DB
+            $stmt = $connection->prepare("UPDATE user_details SET token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?");
+            if (!$stmt) {
+                throw new Exception("Database update query preparation failed: " . $connection->error);
+            }
+
+            $stmt->bind_param("ssii", $accessToken, $refreshToken, $accessTokenExpiration, $userId);
+            if (!$stmt->execute()) {
+                throw new Exception("Database update failed: " . $stmt->error);
+            }
+
+            echo json_encode([
+                "access_token" => $accessToken,
+                "refresh_token" => $refreshToken,
+                "access_token_expiration" => $accessTokenExpiration,
+                "refresh_token_expiration" => $refreshTokenExpiration,
+                "username" => $username
+            ]);
+        } else {
+            http_response_code(401);
+            echo json_encode("wrong password");
+        }
+    } else {
+        http_response_code(401);
+        echo json_encode("user not found");
+    }
+
+    $stmt->close();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode("Server error: " . $e->getMessage());
 }
+
+$connection->close();
 ?>
