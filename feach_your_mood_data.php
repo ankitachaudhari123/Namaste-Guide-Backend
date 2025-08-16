@@ -13,6 +13,7 @@ if (mysqli_num_rows($result_feach_moods)>0) {
             "mood" => $row['mood'],
             "time" => $row['time'],
             "fellings" => $row['fellings'],
+            "date" => $row['date'],
         ); 
     }
     echo json_encode($data);
